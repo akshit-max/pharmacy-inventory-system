@@ -1,4 +1,6 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+
 import Medicines from './pages/Medicines'
 import MedicineForm from './pages/MedicineForm'
 import Home from './pages/Home'
@@ -11,25 +13,23 @@ import AuditTrail from './pages/AuditTrail'
 import ReorderRecommendations from './pages/ReorderRecommendations'
 import ExpiryRisks from './pages/ExpiryRisks'
 import Login from './pages/Login'
-import { Navigate } from 'react-router-dom'
 
 const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-  return children;
-};
+  const token = localStorage.getItem('token')
 
+  if (!token) {
+    return <Navigate to="/login" replace />
+  }
+
+  return children
+}
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* <Route path="/" element={<Medicines />} /> */}
         <Route path="/login" element={<Login />} />
-        
-        {/* Protected Routes */}
+
         <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/medicines" element={<ProtectedRoute><Medicines /></ProtectedRoute>} />
@@ -38,6 +38,7 @@ function App() {
         <Route path="/addmedicine" element={<ProtectedRoute><MedicineForm /></ProtectedRoute>} />
         <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
         <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
+        <Route path="/billing" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
         <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
         <Route path="/purchases" element={<ProtectedRoute><Purchases /></ProtectedRoute>} />
         <Route path="/audit-trail" element={<ProtectedRoute><AuditTrail /></ProtectedRoute>} />
