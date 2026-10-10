@@ -8,6 +8,7 @@ exports.getStockMovements = async (req, res) => {
                 "batch",
                 "batchNumber expiryDate"
             )
+            .populate("performedBy", "name")
             .sort({createdAt:-1});
 
         res.status(200).json(movements);

@@ -1,19 +1,33 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
+
+    // Get user from localStorage
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+    const handleLogout = () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        navigate("/login");
+    };
 
     // Helper function to check if the link is active
     const isActive = (path) => location.pathname === path;
 
     const navLinks = [
-        { name: 'Dashboard', path: '/inventory' },
+        { name: 'Dashboard', path: '/dashboard' },
+        { name: 'Inventory', path: '/inventory' },
         { name: 'Medicines', path: '/medicines' },
-        { name: 'Billing', path: '/billing' },
+        { name: 'Sales', path: '/sales' },
+        { name: 'Purchases', path: '/purchases' },
         { name: 'Suppliers', path: '/suppliers' },
-        { name: 'AddMedicine', path: '/addmedicine' },
+        { name: 'Audit Trail', path: '/audit-trail' },
+        { name: 'Smart Reorder', path: '/recommendations' },
+        { name: 'Expiry Risks', path: '/expiry-risks' },
     ];
 
     return (
@@ -49,9 +63,17 @@ const Navbar = () => {
                         ))}
                         
                         {/* Profile / Logout Button */}
-                        <button className="bg-[#009FC6] hover:bg-[#00C8F9] text-white px-5 py-2 rounded-full text-sm font-semibold transition-all shadow-sm">
-                            Logout
-                        </button>
+                        <div className="flex items-center gap-4 border-l border-[#009FC6] pl-4 ml-2">
+                            <span className="text-sm font-semibold text-gray-200">
+                                {user.name ? `Hi, ${user.name}` : ''}
+                            </span>
+                            <button 
+                                onClick={handleLogout}
+                                className="bg-[#009FC6] hover:bg-[#00C8F9] text-white px-5 py-2 rounded-full text-sm font-semibold transition-all shadow-sm"
+                            >
+                                Logout
+                            </button>
+                        </div>
                     </div>
 
                     {/* Mobile Menu Toggle Button */}
@@ -90,7 +112,10 @@ const Navbar = () => {
                                 {link.name}
                             </Link>
                         ))}
-                        <button className="w-full text-left block px-3 py-3 rounded-md text-base font-medium text-red-300 hover:bg-red-500 hover:text-white mt-4 border border-red-400/30">
+                        <button 
+                            onClick={handleLogout}
+                            className="w-full text-left block px-3 py-3 rounded-md text-base font-medium text-red-300 hover:bg-red-500 hover:text-white mt-4 border border-red-400/30"
+                        >
                             Logout
                         </button>
                     </div>

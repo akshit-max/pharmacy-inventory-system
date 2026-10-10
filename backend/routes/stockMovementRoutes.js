@@ -1,4 +1,5 @@
 const express=require("express");
+const { verifyToken, authorizeRoles } = require("../middleware/authMiddleware");
 
 const {
     getStockMovements
@@ -6,5 +7,5 @@ const {
 
 const router=express.Router();
 
-router.get("/",getStockMovements); 
+router.get("/", verifyToken, authorizeRoles("Admin", "Pharmacist"), getStockMovements); 
 module.exports= router;

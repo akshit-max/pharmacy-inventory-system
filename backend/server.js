@@ -14,6 +14,8 @@ const purchaseRoutes = require("./routes/purchaseRoutes");
 const inventoryRoutes = require("./routes/inventoryRoutes")
 const stockMovementRoutes = require("./routes/stockMovementRoutes")
 const saleRoutes = require("./routes/saleRoutes")
+const analyticsRoutes = require("./routes/analyticsRoutes")
+const authRoutes = require("./routes/authRoutes")
 
 app.use(express.json());
 app.use(cors());
@@ -26,6 +28,7 @@ app.get("/",(req,res)=>{
     });
 });
 
+app.use("/api/auth", authRoutes);
 app.use("/api/medicines",medicineRoutes)
 app.use("/api/batches",batchRoutes)
 app.use("/api/suppliers",supplierRoutes);
@@ -33,6 +36,7 @@ app.use("/api/purchase",purchaseRoutes);
 app.use("/api/inventory",inventoryRoutes);
 app.use("/api/stockMovements",stockMovementRoutes);
 app.use("/api/sales",saleRoutes);
+app.use("/api/analytics",analyticsRoutes);
 
 
 const PORT= process.env.PORT || 5000 ;
