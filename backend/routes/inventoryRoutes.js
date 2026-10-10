@@ -1,4 +1,5 @@
-const express=require("express")
+const express=require("express");
+const { verifyToken, authorizeRoles } = require("../middleware/authMiddleware");
 
 const {
     getInventory,
@@ -7,7 +8,7 @@ const {
 
 const router=express.Router();
 
-router.get("/",getInventory);
-router.get("/medicine/:medicineId",getInventory);
+router.get("/", verifyToken, authorizeRoles("Admin", "Pharmacist", "Cashier"), getInventory);
+router.get("/medicine/:medicineId", verifyToken, authorizeRoles("Admin", "Pharmacist", "Cashier"), getInventory);
 
 module.exports=router;

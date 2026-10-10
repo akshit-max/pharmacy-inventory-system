@@ -31,6 +31,10 @@ const stockMovementSchema=new mongoose.Schema({
     note:{
         type: String,
         trim: true,
+    },
+    performedBy:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
     }
 },{
     timestamps: true

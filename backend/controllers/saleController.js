@@ -74,7 +74,8 @@ exports.createSale = async (req, res) => {
                         batch: batch._id,
                         type: "SALE",
                         quantity: -quantityToSell,
-                        note: `Sale invoice ${invoiceNumber}`
+                        note: `Sale invoice ${invoiceNumber}`,
+                        performedBy: req.user ? req.user.id : undefined
                     }],
                     { session }
                 );

@@ -1,4 +1,5 @@
 const express=require("express");
+const { verifyToken, authorizeRoles } = require("../middleware/authMiddleware");
 
 const{
     createBatch,
@@ -10,15 +11,16 @@ const{
 
 const router=express.Router();
 
-router.post("/",createBatch);
-router.get("/",getMedicineBatches);
+router.post("/", verifyToken, authorizeRoles("Admin"), createBatch);
+router.get("/", verifyToken, authorizeRoles("Admin", "Pharmacist", "Cashier"), getMedicineBatches);
 
 router.get(
   "/medicine/:medicineId",
+  verifyToken, authorizeRoles("Admin", "Pharmacist", "Cashier"),
   getMedicineBatches
 );
 
-router.put("/:id",updateBatch);
-router.delete("/:id",deleteBatch);
+router.put("/:id", verifyToken, authorizeRoles("Admin", "Pharmacist"), updateBatch);
+router.delete("/:id", verifyToken, authorizeRoles("Admin"), deleteBatch);
 
 module.exports=router;

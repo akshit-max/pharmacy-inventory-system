@@ -1,4 +1,5 @@
 const express=require("express");
+const { verifyToken, authorizeRoles } = require("../middleware/authMiddleware");
 
 const{
     createPurchase,
@@ -9,8 +10,8 @@ const{
 
 const router=express.Router();
 
-router.post("/",createPurchase);
-router.get("/",getPurchases);
-router.get("/:id",getPurchase);
+router.post("/", verifyToken, authorizeRoles("Admin"), createPurchase);
+router.get("/", verifyToken, authorizeRoles("Admin", "Pharmacist"), getPurchases);
+router.get("/:id", verifyToken, authorizeRoles("Admin", "Pharmacist"), getPurchase);
 
 module.exports=router;
