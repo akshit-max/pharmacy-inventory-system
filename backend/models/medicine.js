@@ -29,6 +29,16 @@ const medicineSchema=new mongoose.Schema({
         default: 10,
         min: [0,"Reorder level is required"]
     },
+    supplierLeadTime: {
+        type: Number,
+        default: 5,
+        min: [0, "Supplier lead time cannot be negative"]
+    },
+    safetyStock: {
+        type: Number,
+        default: 20,
+        min: [0, "Safety stock cannot be negative"]
+    },
     prescriptionRequired:{
         type: Boolean,
         default: false,
