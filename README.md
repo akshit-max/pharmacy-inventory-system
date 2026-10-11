@@ -1,103 +1,323 @@
-# 💊 PharmaSys - MERN Pharmacy Management System
+# PharmaSys - Pharmacy Inventory Management System
 
-A full-stack **MERN (MongoDB, Express.js, React.js, Node.js)** web application built for a college minor project. This system moves beyond basic CRUD operations to demonstrate secure authentication, transactional integrity, intelligent inventory routing (FEFO), and transparent analytics.
+A full-stack pharmacy management application built with the MERN stack for managing inventory, purchases, sales, suppliers, medicine records, and analytics in a secure, role-based workflow.
 
----
+This project is designed for pharmacy operations where stock accuracy, expiry control, purchase tracking, and audit visibility are critical. It includes a React frontend, an Express backend, and MongoDB data models for medicines, batches, suppliers, purchases, sales, and user activity logs.
 
-## 📌 Project Overview
-PharmaSys is designed to centralize pharmacy records and automate the flow of inventory. When purchases arrive, stock goes up. When sales occur, stock goes down. More importantly, it provides operational intelligence—identifying which medicines are running out based on real sales data, and alerting pharmacists to batches that are about to expire.
+## Overview
 
-## ⚠️ Problem Statement
-Pharmacies handle critical inventory with strict expiration dates. Traditional manual tracking leads to:
-1. Selling expired medicine (Safety Risk).
-2. Throwing away expired medicine (Financial Loss).
-3. Running out of critical stock unexpectedly (Operational Failure).
+PharmaSys helps pharmacies streamline day-to-day operations by providing:
 
-PharmaSys solves these problems by strictly enforcing FEFO (First-Expire, First-Out) at the point of sale, providing demand-based reorder calculations, and proactively highlighting expiry risks.
+- Medicine catalog management
+- Batch-wise inventory tracking
+- Purchase and sales workflows
+- Supplier management
+- Expiry risk monitoring
+- Reorder recommendations
+- Role-based access control
+- Dashboard and analytics
+- Audit trail for operational transparency
 
----
+## Features
 
-## ✨ Key Features
+### Inventory Management
+- Add, edit, and view medicines
+- Manage item category, dose, manufacturer, and safety stock
+- Track inventory by physical stock batches
+- Monitor expired, low-stock, and near-expiry items
 
-### 🔐 Security & Access
-* **Role-Based Access Control (RBAC):** Distinct permissions for Admin, Pharmacist, and Cashier.
-* **JWT Authentication:** Secure, stateless session management.
-* **Audit Trail:** Every purchase and sale strictly logs the user (`performedBy`) responsible for the action.
+### Purchase & Sales Workflow
+- Record and manage supplier purchases
+- Create sales transactions with stock validation
+- Prevent overselling and invalid stock deductions
+- Maintain purchase/sale history linked to users and timestamps
 
-### 📦 Inventory Engine
-* **MongoDB Transactions:** Purchases and Sales are wrapped in ACID transactions. If a sale fails halfway, no stock is deducted.
-* **FEFO Routing:** The point-of-sale system automatically deducts stock from the batch expiring soonest, protecting profits.
-* **Oversell Protection:** Concurrent sales attempting to buy more stock than available are blocked.
+### Expiry & Reorder Intelligence
+- Identify expired and near-expiry stock
+- Categorize batches based on expiry risk
+- Estimate reorder points based on demand and lead time
+- Highlight medicines that require replenishment
 
-### 🧠 Analytics & Intelligence (No AI/ML)
-* **Demand-Based Smart Reorders:** Calculates Average Daily Demand (last 30 days) and outputs a mathematically sound Reorder Point using Supplier Lead Times and Safety Stock.
-* **Expiry-Risk Monitoring:** Scans the entire inventory to categorize batches into Expired, Critical (<7 days), High Risk (7-30 days), Upcoming (30-90 days), and Safe (>90 days), calculating the estimated financial value at risk.
-* **Live Dashboard:** Real-time metrics for today's transactions and total eligible inventory.
+### Security & Access Control
+- JWT-based authentication
+- Role-based access for different user types
+- Protected routes on the frontend
+- Audit logging of transactions and changes
 
----
+### Dashboard & Analytics
+- Key metrics for sales, purchases, and inventory health
+- Real-time operational overview
+- Reorder recommendations page
+- Expiry risk dashboard
+- Transaction history and audit logs
 
-## 🛠️ Technology Stack
-* **Frontend:** React.js, Vite, Tailwind CSS, Axios, React Router.
-* **Backend:** Node.js, Express.js.
-* **Database:** MongoDB Atlas (Replica Set required for Transactions), Mongoose ODM.
-* **Security:** Bcrypt (hashing), JSON Web Tokens (auth).
+## Tech Stack
 
----
+### Frontend
+- React
+- Vite
+- React Router
+- Axios
+- Tailwind CSS
 
-## 🏗️ System Architecture
-The application uses a standard RESTful architecture. The React frontend communicates statelessly with the Express backend via JSON over HTTP. The backend enforces authentication via middleware before passing requests to the controller layer, which executes Mongoose queries inside isolated MongoDB Sessions.
+### Backend
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
 
----
+### Authentication & Security
+- JWT
+- bcryptjs
+- CORS
 
-## 🗄️ Database Models and Relationships
-* **User:** Stores credentials and roles.
-* **Medicine:** The master catalog (Name, Category, Safety Stock, Lead Time).
-* **Batch:** Physical inventory instances linked to a Medicine. Tracks Quantity, Purchase Price, and Expiry Date.
-* **Supplier:** Vendor information.
-* **Purchase:** Incoming orders. Linked to Supplier. Creates new Batches.
-* **Sale:** Outgoing orders. Decrements Batch quantities.
-* **StockMovement:** An append-only audit log tracking exactly how many units were added or removed, why, and by whom.
+## Architecture
 
----
+The project follows a standard full-stack architecture:
 
-## 🚀 Installation and Environment Configuration
+- Frontend: React app for UI and route-based screens
+- Backend: Express API server for business logic and data access
+- Database: MongoDB for product, inventory, sales, and user data
+- Auth: JWT verification on protected endpoints
 
-### Prerequisites
-* Node.js (v18+)
-* MongoDB Atlas Cluster (Local standalone MongoDB **will not work** as it does not support transactions).
+## Project Structure
 
-### 1. Backend Setup
-Create a `.env` file in the `backend/` directory:
-```env
-PORT=5000
-MONGO_URI=mongodb+srv://<username>:<password>@<cluster-url>/<dbname>
-JWT_SECRET=your_super_secret_string
+```bash
+pharmacy-inventory-system/
+├── backend/
+│   ├── config/
+│   ├── controllers/
+│   ├── middleware/
+│   ├── models/
+│   ├── routes/
+│   ├── .gitignore
+│   ├── package.json
+│   ├── package-lock.json
+│   └── server.js
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   ├── .gitignore
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.js
+│   └── README.md
+├── README.md
+└── .gitignore
 ```
+
+## Main Modules
+
+### Backend APIs
+The backend exposes routes for:
+
+- Authentication
+- Medicines
+- Batches
+- Suppliers
+- Purchases
+- Sales
+- Inventory
+- Stock movements
+- Analytics
+
+### Frontend Pages
+- Login
+- Dashboard
+- Medicine catalog
+- Add/edit medicine
+- Inventory overview
+- Purchase management
+- Sales management
+- Suppliers management
+- Reorder recommendations
+- Expiry risk monitoring
+- Audit trail
+- About page
+
+## Prerequisites
+
+Before running the project, make sure you have:
+
+- Node.js v18 or later
+- npm or yarn
+- MongoDB instance or MongoDB Atlas cluster
+- A `.env` file with required environment variables
+
+## Installation
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/akshit-max/pharmacy-inventory-system.git
+cd pharmacy-inventory-system
+```
+
+### 2. Backend setup
+
 ```bash
 cd backend
 npm install
-node server.js
 ```
 
-### 2. Frontend Setup
+Create a `.env` file inside the `backend` directory:
+
+```env
+PORT=5000
+MONGO_URI=mongodb+srv://<username>:<password>@<cluster-url>/<database-name>
+JWT_SECRET=your_super_secret_key
+```
+
+Start the backend server:
+
 ```bash
-cd frontend
+npm start
+```
+
+### 3. Frontend setup
+
+```bash
+cd ../frontend
 npm install
 npm run dev
 ```
 
+The frontend will usually run on:
+
+```bash
+http://localhost:5173
+```
+
+The backend is typically served at:
+
+```bash
+http://localhost:5000
+```
+
+## Environment Variables
+
+### Backend
+| Variable | Description |
+| --- | --- |
+| `PORT` | Port for the Express server |
+| `MONGO_URI` | MongoDB connection string |
+| `JWT_SECRET` | Secret key for JWT generation and verification |
+
+## API Overview
+
+### Authentication
+- `POST /api/auth/login`
+
+### Medicines
+- `GET /api/medicines`
+- `POST /api/medicines`
+- `GET /api/medicines/:id`
+- `PUT /api/medicines/:id`
+- `DELETE /api/medicines/:id`
+
+### Batches
+- `GET /api/batches`
+- `POST /api/batches`
+- `GET /api/batches/:id`
+
+### Suppliers
+- `GET /api/suppliers`
+- `POST /api/suppliers`
+- `PUT /api/suppliers/:id`
+- `DELETE /api/suppliers/:id`
+
+### Purchases
+- `POST /api/purchase`
+- `GET /api/purchase`
+
+### Sales
+- `POST /api/sales`
+- `GET /api/sales`
+
+### Inventory & Analytics
+- `GET /api/inventory`
+- `GET /api/analytics/dashboard`
+- `GET /api/analytics/reorder-recommendations`
+- `GET /api/analytics/expiry-risks`
+
+## Core Data Models
+
+### User
+Stores the user account, password hash, and role information for authentication and permissions.
+
+### Medicine
+Represents the master medicine catalog including name, category, safety stock, and product metadata.
+
+### Batch
+Represents the physical stock available for a medicine, including expiry date, quantity, purchase price, and batch relationships.
+
+### Supplier
+Stores supplier business details and contact information.
+
+### Purchase
+Tracks incoming stock purchases and is linked to a supplier and batches created from the purchase.
+
+### Sale
+Tracks outgoing sales, stock deduction, and related transaction metadata.
+
+### StockMovement
+Logs inventory movement for traceability and auditing.
+
+## Usage Workflow
+
+1. Create or import medicine data
+2. Add supplier records
+3. Record purchases to increase inventory stock
+4. Monitor inventory and sales from the dashboard
+5. Receive alerts for near-expiry or low-stock items
+6. Generate reorder recommendations
+7. Process sales while maintaining stock integrity and FEFO principles
+
+## Security Considerations
+
+- JWT tokens are stored on the client and used to authorize access
+- Protected routes restrict unauthorized navigation
+- Sensitive environment variables must not be committed to version control
+- MongoDB credentials should be stored securely and rotated periodically
+
+## Future Improvements
+
+- Barcode scanner integration
+- PDF invoice generation
+- Email or SMS alerts for expiring stock
+- Advanced reporting and export features
+- Multi-branch inventory support
+- Customer and prescription tracking
+
+## Contributing
+
+Contributions are welcome. To contribute:
+
+```bash
+git checkout -b feature/your-feature-name
+git commit -m "Add your feature"
+git push origin feature/your-feature-name
+```
+
+Then open a pull request for review.
+
+## License
+
+This project is currently licensed under the ISC License unless otherwise updated in the repository.
+
+## Contact
+
+If you want to discuss this project or extend it for a real-world pharmacy setup, feel free to reach out via the repository owner or project maintainer.
+
+## Summary
+
+PharmaSys is a practical pharmacy inventory and sales management system built for operational accuracy, stock safety, and business insight. It brings together product management, transaction tracking, user authentication, analytics, and inventory intelligence in a single MERN-based application.
+
 ---
 
-## 🔌 API Endpoints (Highlighted)
-* `POST /api/auth/login` - Authenticate user
-* `POST /api/purchases` - Create a purchase (Admin only, uses Transaction)
-* `POST /api/sales` - Create a sale (Deducts stock via FEFO)
-* `GET /api/analytics/dashboard` - Live KPI metrics
-* `GET /api/analytics/reorder-recommendations` - Computes 30-day demand logic
-* `GET /api/analytics/expiry-risks` - Categorizes impending batch expirations
-
----
-
-## 🚧 Known Limitations & Future Scope
-* **Limitations:** The Smart Reorder feature strictly requires 30 days of sales history; it does not account for seasonal spikes. The system does not currently integrate with barcode scanners.
-* **Future Scope:** Automated email alerts for critical expiry risks and PDF invoice generation for sales.
+If you want, I can also generate:
+- a more professional GitHub-style README with badges and screenshots placeholders
+- a simpler student-project README version
+- a deployment-ready README for Render/Heroku/Vercel
+- a README tailored specifically for college submission format
