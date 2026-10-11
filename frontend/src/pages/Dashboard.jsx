@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import Navbar from '../components/navbar';
+import Footer from '../components/footer';
 
 const LoadAnimations = () => (
     <style>{`
@@ -43,6 +45,8 @@ const Dashboard = () => {
     ] : [];
 
     return (
+        <>
+        <Navbar />
         <div className="min-h-screen bg-gray-50 p-6 md:p-12 font-sans">
             <LoadAnimations />
             <div className="max-w-7xl mx-auto space-y-8">
@@ -140,6 +144,8 @@ const Dashboard = () => {
                 )}
             </div>
         </div>
+        <Footer />
+        </>
     );
 };
 

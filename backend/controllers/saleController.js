@@ -98,11 +98,40 @@ exports.createSale = async (req, res) => {
         );
 
         await session.commitTransaction();
+        await sale.populate("items.medicine", "name genericName");
         res.status(201).json(sale);
     } catch (error) {
-        await session.abortTransaction();
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
         res.status(400).json({ message: error.message });
     } finally {
         await session.endSession();
+    }
+};
+
+// GET /api/sales — list all sales, newest first, with medicine names populated
+exports.getSales = async (req, res) => {
+    try {
+        const sales = await Sale.find()
+            .populate("items.medicine", "name genericName")
+            .sort({ saleDate: -1 });
+        res.status(200).json(sales);
+    } catch (error) {
+        res.status(500).json({ message: "Failed to fetch sales", error: error.message });
+    }
+};
+
+// GET /api/sales/:id — single sale detail with full item breakdown
+exports.getSaleById = async (req, res) => {
+    try {
+        const sale = await Sale.findById(req.params.id)
+            .populate("items.medicine", "name genericName");
+        if (!sale) {
+            return res.status(404).json({ message: "Sale not found" });
+        }
+        res.status(200).json(sale);
+    } catch (error) {
+        res.status(500).json({ message: "Failed to fetch sale", error: error.message });
     }
 };

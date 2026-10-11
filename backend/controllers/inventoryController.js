@@ -9,13 +9,34 @@ exports.getInventory = async (req, res) => {
             )
             .sort({ expiryDate: 1 });
 
+        const today = new Date();
+
+        // Step 1: Aggregate total UNEXPIRED quantity per medicine so that
+        // isLowStock reflects the medicine-level stock, not a single batch.
+        // This is consistent with how analyticsController computes lowStockAlerts.
+        const medicineStock = {};
+        batches.forEach((batch) => {
+            const medId = batch.medicine?._id?.toString();
+            if (!medId) return;
+            if (new Date(batch.expiryDate) > today) {
+                medicineStock[medId] = (medicineStock[medId] || 0) + batch.quantity;
+            }
+        });
+
+        // Step 2: Build the response array with corrected isExpired and isLowStock.
         const inventory = batches.map((batch) => {
-            const today = new Date();
             const expiry = new Date(batch.expiryDate);
 
-            const isExpired = expiry > today;
+            // FIX: was `expiry > today` which was inverted — expired batches were
+            // being marked as "not expired" and vice versa.
+            const isExpired = expiry < today;
 
-            const isLowStock = batch.quantity <=batch.medicine.reorderLevel;
+            // FIX: compare total medicine stock (unexpired) against the reorderLevel,
+            // not the quantity of this individual batch. Orphaned batches without medicine
+            // reference are guarded against false low-stock flags.
+            const medId = batch.medicine?._id?.toString();
+            const totalMedicineStock = medicineStock[medId] || 0;
+            const isLowStock = Boolean(batch.medicine) && !isExpired && totalMedicineStock <= (batch.medicine.reorderLevel ?? 10);
 
             return {
                 _id: batch._id,
@@ -26,12 +47,12 @@ exports.getInventory = async (req, res) => {
                 sellingPrice: batch.sellingPrice,
                 quantity: batch.quantity,
                 isExpired,
-                isLowStock
-            }
+                isLowStock,
+            };
         });
+
         res.status(200).json(inventory);
-    }
-    catch (error) {
+    } catch (error) {
         res.status(500).json({
             message: "Can't get Inventory details",
             error: error.message
