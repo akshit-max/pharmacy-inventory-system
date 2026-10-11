@@ -14,6 +14,7 @@ import ReorderRecommendations from './pages/ReorderRecommendations'
 import ExpiryRisks from './pages/ExpiryRisks'
 import Login from './pages/Login'
 import About from './pages/About'
+import Signup from './pages/Signup'
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token')
@@ -31,6 +32,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/about" element={<About />} />
+        <Route path="/signup" element={<Signup />} />
 
         <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

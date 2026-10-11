@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 function Login() {
@@ -84,6 +84,12 @@ function Login() {
                         {loading ? "Signing in..." : "Sign In"}
                     </button>
                 </form>
+                <p className="mt-6 text-center text-sm text-slate-500">
+                    New to PharmaSys?{" "}
+                    <Link to="/signup" className="font-bold text-[#009FC6] hover:text-[#006179]">
+                        Create an account
+                    </Link>
+                </p>
             </div>
         </div>
     );
