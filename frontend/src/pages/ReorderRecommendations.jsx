@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import api from "../services/api";
+import Navbar from "../components/navbar";
+import Footer from "../components/footer";
 
 const ReorderRecommendations = () => {
     const [recommendations, setRecommendations] = useState([]);
@@ -40,6 +42,8 @@ const ReorderRecommendations = () => {
     };
 
     return (
+        <>
+        <Navbar />
         <div className="p-6 max-w-7xl mx-auto font-sans">
             <div className="flex justify-between items-center mb-6">
                 <div>
@@ -132,6 +136,8 @@ const ReorderRecommendations = () => {
                 </div>
             )}
         </div>
+        <Footer />
+        </>
     );
 };
 

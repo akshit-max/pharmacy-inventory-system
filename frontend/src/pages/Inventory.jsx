@@ -37,22 +37,16 @@ function Inventory() {
     };
 
     useEffect(() => {
-        const loadInitialInventory = async () => {
-            try {
-                const response = await api.get("/inventory");
-                setInventory(Array.isArray(response.data) ? response.data : []);
-            } catch (requestError) {
-                console.error("Failed to load inventory", requestError);
-                setError("We couldn't load your inventory. Please try again.");
-            } finally { setLoading(false); }
-        };
-        loadInitialInventory();
+        fetchInventory();
     }, []);
 
     const getStatus = (item) => {
         const expiryDate = new Date(item.expiryDate);
         if (!Number.isNaN(expiryDate.getTime()) && expiryDate < new Date()) return { label: "Expired", classes: "bg-red-50 text-red-700" };
-        if (item.isLowStock) return { label: "Low stock", classes: "bg-orange-50 text-orange-700" };
+        const isLow = item.isLowStock !== undefined
+            ? item.isLowStock
+            : (item.medicine && item.quantity <= (item.medicine.reorderLevel ?? 10));
+        if (isLow) return { label: "Low stock", classes: "bg-orange-50 text-orange-700" };
         return { label: "In stock", classes: "bg-emerald-50 text-emerald-700" };
     };
 
