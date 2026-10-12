@@ -4,7 +4,7 @@ const { getDashboardStats, getReorderRecommendations, getExpiryRisks } = require
 
 const router = express.Router();
 
-router.get("/dashboard", verifyToken, authorizeRoles("Admin", "Pharmacist"), getDashboardStats);
+router.get("/dashboard", verifyToken, authorizeRoles("Admin", "Pharmacist", "Cashier"), getDashboardStats);
 router.get("/reorder-recommendations", verifyToken, authorizeRoles("Admin", "Pharmacist"), getReorderRecommendations);
 router.get("/expiry-risks", verifyToken, authorizeRoles("Admin", "Pharmacist"), getExpiryRisks);
 

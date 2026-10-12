@@ -22,6 +22,7 @@ const LoadAnimations = () => (
 const Dashboard = () => {
     const [statsData, setStatsData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [statsError, setStatsError] = useState("");
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -30,6 +31,9 @@ const Dashboard = () => {
                 setStatsData(response.data);
             } catch (error) {
                 console.error("Failed to fetch dashboard stats", error);
+                setStatsError(error.response?.status === 403
+                    ? "Your account does not have permission to view dashboard analytics."
+                    : "Dashboard analytics are currently unavailable.");
             } finally {
                 setLoading(false);
             }
@@ -70,8 +74,14 @@ const Dashboard = () => {
                     <div className="text-center py-10 text-[#006179] font-bold">Loading Dashboard...</div>
                 ) : (
                     <>
+                        {statsError && (
+                            <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
+                                {statsError}
+                            </div>
+                        )}
+
                         {/* Statistics Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {statsData && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                             {stats.map((stat, index) => (
                                 <div
                                     key={stat.title}
@@ -95,7 +105,7 @@ const Dashboard = () => {
                                     </div>
                                 </div>
                             ))}
-                        </div>
+                        </div>}
 
                         {/* Main Content Area */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -122,7 +132,7 @@ const Dashboard = () => {
                             </div>
                             
                             {/* Attention Box */}
-                            <div className="rise-in lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6" style={{ animationDelay: '220ms' }}>
+                            {statsData && <div className="rise-in lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6" style={{ animationDelay: '220ms' }}>
                                 <h2 className="text-lg font-bold text-[#006179] mb-4 pb-3 border-b border-gray-100">Inventory Status Overview</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
@@ -138,7 +148,7 @@ const Dashboard = () => {
                                         <p className="text-2xl font-black text-emerald-600 mt-2">{statsData.eligibleInventory}</p>
                                     </div>
                                 </div>
-                            </div>
+                            </div>}
                         </div>
                     </>
                 )}
