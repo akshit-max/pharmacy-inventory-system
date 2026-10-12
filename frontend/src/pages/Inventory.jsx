@@ -20,6 +20,7 @@ const formatDate = (date) => {
 
 function Inventory() {
     const [inventory, setInventory] = useState([]);
+    const [lowStockCount, setLowStockCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
@@ -29,7 +30,8 @@ function Inventory() {
         try {
             setLoading(true); setError("");
             const response = await api.get("/inventory");
-            setInventory(Array.isArray(response.data) ? response.data : []);
+            setInventory(Array.isArray(response.data?.inventory) ? response.data.inventory : []);
+            setLowStockCount(Number(response.data?.summary?.lowStockMedicines) || 0);
         } catch (requestError) {
             console.error("Failed to load inventory", requestError);
             setError("We couldn't load your inventory. Please try again.");
@@ -53,9 +55,9 @@ function Inventory() {
     const summary = useMemo(() => ({
         total: inventory.length,
         units: inventory.reduce((total, item) => total + (Number(item.quantity) || 0), 0),
-        lowStock: inventory.filter((item) => getStatus(item).label === "Low stock").length,
+        lowStock: lowStockCount,
         expired: inventory.filter((item) => getStatus(item).label === "Expired").length,
-    }), [inventory]);
+    }), [inventory, lowStockCount]);
 
     const visibleInventory = useMemo(() => {
         const query = search.trim().toLowerCase();

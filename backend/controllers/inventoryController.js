@@ -1,13 +1,36 @@
 const Batch = require("../models/batch")
+const Medicine = require("../models/medicine")
 
 exports.getInventory = async (req, res) => {
     try {
-        const batches = await Batch.find()
+        const [batches, medicines] = await Promise.all([
+            Batch.find()
             .populate(
                 "medicine",
                 "name genericName category manufacturer reorderLevel"
             )
-            .sort({ expiryDate: 1 });
+            .sort({ expiryDate: 1 }),
+            Medicine.find().select("reorderLevel")
+        ]);
+
+        // Reorder levels apply to a medicine's total stock, not each batch
+        // independently. Sum batches first so multiple small batches do not
+        // incorrectly trigger a low-stock alert.
+        const stockByMedicine = new Map();
+        for (const batch of batches) {
+            const medicineId = batch.medicine?._id?.toString();
+            if (medicineId) {
+                stockByMedicine.set(
+                    medicineId,
+                    (stockByMedicine.get(medicineId) || 0) + batch.quantity
+                );
+            }
+        }
+
+        const lowStockMedicines = medicines.filter((medicine) => {
+            const totalQuantity = stockByMedicine.get(medicine._id.toString()) || 0;
+            return totalQuantity <= (medicine.reorderLevel ?? 10);
+        }).length;
 
         const today = new Date();
 
@@ -50,8 +73,10 @@ exports.getInventory = async (req, res) => {
                 isLowStock,
             };
         });
-
-        res.status(200).json(inventory);
+        res.status(200).json({
+            inventory,
+            summary: { lowStockMedicines }
+        });
     } catch (error) {
         res.status(500).json({
             message: "Can't get Inventory details",
