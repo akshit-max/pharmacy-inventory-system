@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { saveLogin, homePathFor } from "../utils/auth";
 
 function Signup() {
     const [name, setName] = useState("");
@@ -23,10 +24,8 @@ function Signup() {
         setLoading(true);
         try {
             const response = await api.post("/auth/register", { name, email, password });
-            localStorage.setItem("token", response.data.token);
-            localStorage.setItem("user", JSON.stringify(response.data.user));
-            api.defaults.headers.common.Authorization = `Bearer ${response.data.token}`;
-            navigate("/dashboard");
+            saveLogin(response.data.token, response.data.user);
+            navigate(homePathFor(response.data.user));
         } catch (requestError) {
             setError(requestError.response?.data?.message || "Unable to create your account. Please try again.");
         } finally {
@@ -122,7 +121,7 @@ function Signup() {
                     Already have an account?{" "}
                     <Link to="/login" className="font-bold text-[#009FC6] hover:text-[#006179]">Sign in</Link>
                 </p>
-                <p className="mt-3 text-center text-xs text-slate-400">New accounts are created with the Cashier role.</p>
+                <p className="mt-3 text-center text-xs text-slate-400">The first account becomes the Admin. Later accounts are Cashiers (an Admin can change roles on the Users page).</p>
             </section>
         </main>
     );

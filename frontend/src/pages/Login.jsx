@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { saveLogin, homePathFor } from "../utils/auth";
 
 function Login() {
     const [email, setEmail] = useState("");
@@ -17,15 +18,11 @@ function Login() {
         try {
             const response = await api.post("/auth/login", { email, password });
             
-            // Save token and user to localStorage
-            localStorage.setItem("token", response.data.token);
-            localStorage.setItem("user", JSON.stringify(response.data.user));
+            // Save token and user (api.js adds the token to every request)
+            saveLogin(response.data.token, response.data.user);
 
-            // Set default headers for future API requests
-            api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
-
-            // Redirect to dashboard
-            navigate("/dashboard");
+            // Cashiers go to Sales, Admin/Pharmacist go to the Dashboard
+            navigate(homePathFor(response.data.user));
         } catch (err) {
             console.error("Login failed:", err);
             setError(err.response?.data?.message || "Invalid email or password");

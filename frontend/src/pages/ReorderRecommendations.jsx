@@ -2,28 +2,35 @@ import { useState, useEffect } from "react";
 import api from "../services/api";
 import Navbar from "../components/navbar";
 import Footer from "../components/footer";
+import { errorMessage } from "../utils/auth";
 
 const ReorderRecommendations = () => {
     const [recommendations, setRecommendations] = useState([]);
+    const [reloadCount, setReloadCount] = useState(0); // bump to load the data again
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    const fetchRecommendations = async () => {
-        try {
-            setLoading(true);
-            const response = await api.get("/analytics/reorder-recommendations");
-            setRecommendations(response.data);
-            setError("");
-        } catch (err) {
-            setError(err.response?.data?.message || "Failed to fetch reorder recommendations");
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // Load data when the page opens, and again whenever reloadCount changes
     useEffect(() => {
-        fetchRecommendations();
-    }, []);
+        const loadRecommendations = async () => {
+            try {
+                const response = await api.get("/analytics/reorder-recommendations");
+                setRecommendations(response.data);
+                setError("");
+            } catch (err) {
+                setError(errorMessage(err, "Failed to fetch reorder recommendations"));
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadRecommendations();
+    }, [reloadCount]);
+
+    // "Refresh Data" button
+    const fetchRecommendations = () => {
+        setLoading(true);
+        setReloadCount(reloadCount + 1);
+    };
 
     const getStatusBadge = (status) => {
         switch (status) {

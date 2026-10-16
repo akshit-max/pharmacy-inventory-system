@@ -1,9 +1,11 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/navbar';
 import Footer from '../components/footer';
+import { getUser, homePathFor, isLoggedIn } from '../utils/auth';
 
 const HomePage = () => {
+    const loggedIn = isLoggedIn();
+
     return (
         <>
         <Navbar/>
@@ -22,11 +24,11 @@ const HomePage = () => {
                     </p>
                     
                     <div className="flex flex-col sm:flex-row justify-center gap-4 pt-6">
-                        <Link 
-                            to="/login" 
+                        <Link
+                            to={loggedIn ? homePathFor(getUser()) : "/login"}
                             className="bg-[#006179] hover:bg-[#009FC6] text-white text-lg font-bold py-4 px-10 rounded-full shadow-lg transition-all transform hover:-translate-y-1"
                         >
-                            Pharmacist Login
+                            {loggedIn ? "Open PharmaSys" : "Staff Login"}
                         </Link>
                         <Link 
                             to="/about" 

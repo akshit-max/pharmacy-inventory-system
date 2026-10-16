@@ -2,28 +2,35 @@ import { useState, useEffect } from "react";
 import api from "../services/api";
 import Navbar from "../components/navbar";
 import Footer from "../components/footer";
+import { errorMessage } from "../utils/auth";
 
 const ExpiryRisks = () => {
     const [data, setData] = useState({ summary: {}, details: [] });
+    const [reloadCount, setReloadCount] = useState(0); // bump to load the data again
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    const fetchExpiryRisks = async () => {
-        try {
-            setLoading(true);
-            const response = await api.get("/analytics/expiry-risks");
-            setData(response.data);
-            setError("");
-        } catch (err) {
-            setError(err.response?.data?.message || "Failed to fetch expiry risks");
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // Load data when the page opens, and again whenever reloadCount changes
     useEffect(() => {
-        fetchExpiryRisks();
-    }, []);
+        const loadExpiryRisks = async () => {
+            try {
+                const response = await api.get("/analytics/expiry-risks");
+                setData(response.data);
+                setError("");
+            } catch (err) {
+                setError(errorMessage(err, "Failed to fetch expiry risks"));
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadExpiryRisks();
+    }, [reloadCount]);
+
+    // "Refresh Data" button
+    const fetchExpiryRisks = () => {
+        setLoading(true);
+        setReloadCount(reloadCount + 1);
+    };
 
     const getStatusBadge = (category) => {
         switch (category) {

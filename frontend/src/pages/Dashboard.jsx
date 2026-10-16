@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { errorMessage } from '../utils/auth';
 import Navbar from '../components/navbar';
 import Footer from '../components/footer';
 
@@ -22,26 +23,29 @@ const LoadAnimations = () => (
 const Dashboard = () => {
     const [statsData, setStatsData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
+    // Load data once when the page opens
     useEffect(() => {
-        const fetchStats = async () => {
+        const loadStats = async () => {
             try {
                 const response = await api.get('/analytics/dashboard');
                 setStatsData(response.data);
-            } catch (error) {
-                console.error("Failed to fetch dashboard stats", error);
+                setError("");
+            } catch (err) {
+                setError(errorMessage(err, "Could not load dashboard data. Is the backend running?"));
             } finally {
                 setLoading(false);
             }
         };
-        fetchStats();
+        loadStats();
     }, []);
 
     const stats = statsData ? [
         { title: 'Total medicines', value: statsData.totalMedicines, detail: 'registered in system', icon: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z', color: '#009FC6' },
         { title: 'Low stock alerts', value: statsData.lowStockAlerts, detail: 'medicines need reordering', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', color: '#f97316' },
         { title: 'Expiring soon', value: statsData.expiringSoon, detail: 'batches within 30 days', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', color: '#ef4444' },
-        { title: "Today's sales", value: `₹${statsData.todaySalesAmount.toFixed(2)}`, detail: `${statsData.todayTransactions} transactions`, icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', color: '#00C8F9' },
+        { title: "Today's sales", value: `₹${(statsData.todaySalesAmount || 0).toFixed(2)}`, detail: `${statsData.todayTransactions} transactions`, icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', color: '#00C8F9' },
     ] : [];
 
     return (
@@ -68,6 +72,8 @@ const Dashboard = () => {
 
                 {loading ? (
                     <div className="text-center py-10 text-[#006179] font-bold">Loading Dashboard...</div>
+                ) : error ? (
+                    <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-200 font-semibold">{error}</div>
                 ) : (
                     <>
                         {/* Statistics Grid */}
@@ -104,8 +110,8 @@ const Dashboard = () => {
                                 <h2 className="text-lg font-bold text-[#006179] mb-4 pb-3 border-b border-gray-100">Quick actions</h2>
                                 <div className="space-y-2">
                                     {[
-                                        { to: '/addmedicine', label: 'Add new medicine' },
-                                        { to: '/medicines', label: 'Search inventory' },
+                                        { to: '/medicines/add', label: 'Add new medicine' },
+                                        { to: '/inventory', label: 'View inventory' },
                                         { to: '/suppliers', label: 'Manage suppliers' },
                                         { to: '/purchases', label: 'Record purchase' },
                                     ].map((action) => (

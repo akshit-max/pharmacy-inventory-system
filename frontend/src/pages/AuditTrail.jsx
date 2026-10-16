@@ -2,34 +2,32 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 import Navbar from "../components/navbar";
 import Footer from "../components/footer";
+import { errorMessage } from "../utils/auth";
 
 function AuditTrail() {
     const [movements, setMovements] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    const fetchMovements = async () => {
-        try {
-            setLoading(true);
-            const response = await api.get("/stockMovements");
-            setMovements(response.data);
-        } catch (err) {
-            console.error("Failed to fetch stock movements", err);
-            setError("Could not load inventory movement history.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
-        fetchMovements();
+        const loadMovements = async () => {
+            try {
+                const response = await api.get("/stockMovements");
+                setMovements(response.data);
+            } catch (err) {
+                setError(errorMessage(err, "Could not load inventory movement history."));
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadMovements();
     }, []);
 
     const getBadgeStyle = (type) => {
         switch (type) {
             case "PURCHASE": return "bg-emerald-50 text-emerald-700 border-emerald-200";
             case "SALE": return "bg-blue-50 text-blue-700 border-blue-200";
-            case "ADJUSMENT": return "bg-amber-50 text-amber-700 border-amber-200";
+            case "ADJUSTMENT": return "bg-amber-50 text-amber-700 border-amber-200";
             default: return "bg-gray-50 text-gray-700 border-gray-200";
         }
     };
