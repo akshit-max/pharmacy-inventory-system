@@ -1,112 +1,117 @@
-const mongoose = require("mongoose");
-
 const Sale = require("../models/sale");
 const Medicine = require("../models/medicine");
 const Batch = require("../models/batch");
 const StockMovement = require("../models/stockMovement");
 
+// POST /api/sales
+// Step 1: check every item has enough unexpired stock.
+// Step 2: take stock from the batches that expire first (FEFO).
+// Step 3: save the sale and the audit trail.
+// Because all checks happen first, a failed sale never changes the stock.
 exports.createSale = async (req, res) => {
-    const session = await mongoose.startSession();
-
     try {
-        const { invoiceNumber, customerName, customerPhone, items } = req.body;
+        const { customerName, customerPhone, items } = req.body;
+        const invoiceNumber = req.body.invoiceNumber || `SALE-${Date.now()}`;
 
-        if (!invoiceNumber || !Array.isArray(items) || items.length === 0) {
-            throw new Error("invoiceNumber and at least one sale item are required");
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ message: "Add at least one medicine to the sale" });
         }
 
-        session.startTransaction();
-        const saleItems = [];
+        const invoiceExists = await Sale.findOne({ invoiceNumber });
+        if (invoiceExists) {
+            return res.status(400).json({ message: `Invoice number ${invoiceNumber} already exists` });
+        }
 
+        // If the same medicine appears twice, add the quantities together
+        const quantityByMedicine = {};
         for (const item of items) {
-            if (!item.medicine || !Number.isFinite(item.quantity) || item.quantity <= 0) {
-                throw new Error("Each item must include a medicine ID and a positive quantity");
+            const quantity = Number(item.quantity);
+            if (!item.medicine || !Number.isInteger(quantity) || quantity <= 0) {
+                return res.status(400).json({ message: "Each item needs a medicine and a whole-number quantity above 0" });
             }
+            quantityByMedicine[item.medicine] = (quantityByMedicine[item.medicine] || 0) + quantity;
+        }
 
-            const medicine = await Medicine.findById(item.medicine).session(session);
-
+        // ---- Step 1: check stock for every medicine ----
+        const plan = []; // { medicine, batches, quantity }
+        for (const medicineId of Object.keys(quantityByMedicine)) {
+            const medicine = await Medicine.findById(medicineId).catch(() => null);
             if (!medicine) {
-                throw new Error(`Medicine not found: ${item.medicine}`);
+                return res.status(400).json({ message: "One of the selected medicines was not found" });
             }
 
-            let remainingQuantity = item.quantity;
-
-            // Sell batches that expire first.
+            // Only unexpired batches with stock, earliest expiry first
             const batches = await Batch.find({
-                medicine: item.medicine,
+                medicine: medicineId,
                 quantity: { $gt: 0 },
                 expiryDate: { $gt: new Date() }
-            })
-                .sort({ expiryDate: 1 })
-                .session(session);
+            }).sort({ expiryDate: 1 });
 
-            const availableQuantity = batches.reduce(
-                (total, batch) => total + batch.quantity,
-                0
-            );
-
-            if (availableQuantity < item.quantity) {
-                throw new Error(
-                    `Insufficient stock for ${medicine.name}. Available: ${availableQuantity}`
-                );
+            const available = batches.reduce((total, batch) => total + batch.quantity, 0);
+            const wanted = quantityByMedicine[medicineId];
+            if (available < wanted) {
+                return res.status(400).json({
+                    message: `Insufficient stock for ${medicine.name}. Available: ${available}`
+                });
             }
 
+            plan.push({ medicine, batches, quantity: wanted });
+        }
+
+        // ---- Step 2: deduct stock batch by batch ----
+        const saleItems = [];
+        const movements = [];
+        for (const { medicine, batches, quantity } of plan) {
+            let remaining = quantity;
+
             for (const batch of batches) {
-                if (remainingQuantity <= 0) break;
+                if (remaining <= 0) break;
 
-                const quantityToSell = Math.min(batch.quantity, remainingQuantity);
-                const itemTotal = quantityToSell * batch.sellingPrice;
-
-                batch.quantity -= quantityToSell;
-                await batch.save({ session });
+                const takeFromBatch = Math.min(batch.quantity, remaining);
+                batch.quantity -= takeFromBatch;
+                await batch.save();
 
                 saleItems.push({
                     medicine: medicine._id,
                     batch: batch._id,
-                    quantity: quantityToSell,
+                    quantity: takeFromBatch,
                     sellingPrice: batch.sellingPrice,
-                    total: itemTotal
+                    total: takeFromBatch * batch.sellingPrice
                 });
 
-                await StockMovement.create(
-                    [{
-                        medicine: medicine._id,
-                        batch: batch._id,
-                        type: "SALE",
-                        quantity: -quantityToSell,
-                        note: `Sale invoice ${invoiceNumber}`,
-                        performedBy: req.user ? req.user.id : undefined
-                    }],
-                    { session }
-                );
+                movements.push({
+                    medicine: medicine._id,
+                    batch: batch._id,
+                    type: "SALE",
+                    quantity: -takeFromBatch,
+                    note: `Sale invoice ${invoiceNumber}`,
+                    performedBy: req.user ? req.user.id : undefined
+                });
 
-                remainingQuantity -= quantityToSell;
+                remaining -= takeFromBatch;
             }
         }
 
+        // ---- Step 3: save sale and audit trail ----
         const totalAmount = saleItems.reduce((total, item) => total + item.total, 0);
 
-        const [sale] = await Sale.create(
-            [{
-                invoiceNumber,
-                customerName,
-                customerPhone,
-                items: saleItems,
-                totalAmount
-            }],
-            { session }
-        );
+        const sale = await Sale.create({
+            invoiceNumber,
+            customerName,
+            customerPhone,
+            items: saleItems,
+            totalAmount
+        });
 
-        await session.commitTransaction();
+        for (const movement of movements) {
+            movement.referenceId = sale._id;
+            await StockMovement.create(movement);
+        }
+
         await sale.populate("items.medicine", "name genericName");
         res.status(201).json(sale);
     } catch (error) {
-        if (session.inTransaction()) {
-            await session.abortTransaction();
-        }
-        res.status(400).json({ message: error.message });
-    } finally {
-        await session.endSession();
+        res.status(500).json({ message: "Failed to create sale", error: error.message });
     }
 };
 
@@ -132,6 +137,9 @@ exports.getSaleById = async (req, res) => {
         }
         res.status(200).json(sale);
     } catch (error) {
+        if (error.name === "CastError") {
+            return res.status(400).json({ message: "Invalid sale id" });
+        }
         res.status(500).json({ message: "Failed to fetch sale", error: error.message });
     }
 };

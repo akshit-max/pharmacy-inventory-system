@@ -17,7 +17,7 @@ router.get("/", verifyToken, authorizeRoles("Admin", "Pharmacist", "Cashier"), g
 router.get(
   "/medicine/:medicineId",
   verifyToken, authorizeRoles("Admin", "Pharmacist", "Cashier"),
-  getMedicineBatches
+  getMedicineBatch
 );
 
 router.put("/:id", verifyToken, authorizeRoles("Admin", "Pharmacist"), updateBatch);

@@ -1,11 +1,12 @@
-const express=require("express")
+const express = require("express");
+const { verifyToken, authorizeRoles } = require("../middleware/authMiddleware");
 
-const{
+const {
     getDashBoardStats
-}=require("../controllers/dashBoardController");
+} = require("../controllers/dashBoardController");
 
-const router=express.Router();
+const router = express.Router();
 
-router.get("/",getDashBoardStats);
+router.get("/", verifyToken, authorizeRoles("Admin", "Pharmacist"), getDashBoardStats);
 
-module.exports=router;
+module.exports = router;

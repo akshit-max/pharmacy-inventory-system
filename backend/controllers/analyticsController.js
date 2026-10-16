@@ -7,51 +7,46 @@ exports.getDashboardStats = async (req, res) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // Fetch counts
-        const totalMedicines = await Medicine.countDocuments();
-        
-        // Fetch all batches with their medicine details to calculate expiry and low stock
-        const batches = await Batch.find().populate("medicine", "reorderLevel");
-        
+        const medicines = await Medicine.find().select("reorderLevel");
+        const totalMedicines = medicines.length;
+
+        const batches = await Batch.find();
+
         let eligibleInventory = 0;
         let lowStockAlerts = 0;
         let expiredBatches = 0;
         let expiringSoon = 0;
 
+        const now = new Date();
         const next30Days = new Date();
         next30Days.setDate(next30Days.getDate() + 30);
-        
-        const now = new Date();
 
-        // Used to track low stock per medicine instead of per batch
+        // Total unexpired stock for each medicine (medicineId -> quantity)
         const medicineStock = {};
 
         batches.forEach(batch => {
+            if (batch.quantity <= 0) return; // empty batches don't matter
+
             const expiry = new Date(batch.expiryDate);
-            
             if (expiry <= now) {
                 expiredBatches++;
-            } else {
-                eligibleInventory += batch.quantity;
-                if (expiry <= next30Days && batch.quantity > 0) {
-                    expiringSoon++;
-                }
+                return;
             }
 
-            if (batch.medicine) {
-                const medId = batch.medicine._id.toString();
-                if (!medicineStock[medId]) {
-                    medicineStock[medId] = { totalQuantity: 0, reorderLevel: batch.medicine.reorderLevel || 10 };
-                }
-                if (expiry > now) {
-                    medicineStock[medId].totalQuantity += batch.quantity;
-                }
+            eligibleInventory += batch.quantity;
+            if (expiry <= next30Days) {
+                expiringSoon++;
             }
+
+            const medId = batch.medicine.toString();
+            medicineStock[medId] = (medicineStock[medId] || 0) + batch.quantity;
         });
 
-        // Calculate low stock alerts based on total medicine quantity vs reorder level
-        Object.values(medicineStock).forEach(med => {
-            if (med.totalQuantity <= med.reorderLevel) {
+        // A medicine is low on stock when its total unexpired stock is at or
+        // below its reorder level. Medicines with no batches count as 0 stock.
+        medicines.forEach(med => {
+            const stock = medicineStock[med._id.toString()] || 0;
+            if (stock <= (med.reorderLevel ?? 10)) {
                 lowStockAlerts++;
             }
         });
