@@ -17,7 +17,7 @@ const stockMovementSchema=new mongoose.Schema({
         enum: [
             "PURCHASE",
             "SALE",
-            "ADJUSMENT"
+            "ADJUSTMENT"
         ],
         required: true,
     },
@@ -25,7 +25,7 @@ const stockMovementSchema=new mongoose.Schema({
         type: Number,
         required: true,
     },
-    refernceId:{
+    referenceId:{
         type: mongoose.Schema.Types.ObjectId,
     },
     note:{

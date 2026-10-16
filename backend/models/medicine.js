@@ -5,7 +5,7 @@ const medicineSchema=new mongoose.Schema({
         type: String,
         required: [true,"medicine name is required"],
         trim: true,
-        minLength: [2,"Minimum lenght of medicine should be 2"]
+        minLength: [2,"Medicine name must be at least 2 characters"]
     },
     genericName:{
         type: String,
@@ -22,12 +22,12 @@ const medicineSchema=new mongoose.Schema({
     },
     unit:{
         type: String,
-        required:  [true,"Unitis required"],
+        required:  [true,"Unit is required"],
     },
     reorderLevel:{
         type: Number,
         default: 10,
-        min: [0,"Reorder level is required"]
+        min: [0,"Reorder level cannot be negative"]
     },
     supplierLeadTime: {
         type: Number,
