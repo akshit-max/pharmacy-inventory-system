@@ -272,7 +272,8 @@ Terminal 1 (backend):
 
 ```bash
 cd backend
-npm start
+npm run dev     # auto-restarts on code changes (nodemon)
+# or: npm start # plain node, use this when deploying
 ```
 
 Terminal 2 (frontend):
@@ -297,10 +298,30 @@ Backend:
 
 ```bash
 cd backend
-npm start
+npm run dev   # development (nodemon)
+npm start     # production (node)
 ```
 
 > The backend package currently does not define dedicated lint/build scripts.
+
+### First-time setup (creating the Admin)
+
+1. Start backend and frontend, open `http://localhost:5173`, click **Sign up**.
+2. The **first account ever created becomes the Admin**. Every later public signup is a **Cashier**.
+3. As Admin, open the **Users** page to create Pharmacist / Cashier accounts or change roles.
+
+Suggested demo order: Suppliers → Medicines → Purchases (adds stock) → Sales → Inventory / Dashboard / Expiry Risks / Smart Reorder / Audit Trail.
+
+### Roles
+
+| Page / action | Admin | Pharmacist | Cashier |
+| --- | :---: | :---: | :---: |
+| Sales (billing), Inventory, Medicine list | ✅ | ✅ | ✅ |
+| Add / edit / delete medicines | ✅ | ✅ | ❌ |
+| Dashboard, Expiry Risks, Smart Reorder, Audit Trail | ✅ | ✅ | ❌ |
+| View suppliers & purchase history | ✅ | ✅ | ❌ |
+| Record purchases, manage suppliers | ✅ | ❌ | ❌ |
+| Manage users (Users page) | ✅ | ❌ | ❌ |
 
 ### Expected local URLs
 
@@ -327,9 +348,16 @@ npm start
 | `/api/analytics` | Dashboard, reorder, and expiry analytics |
 
 Auth routes currently include:
-- `POST /api/auth/register`
+- `POST /api/auth/register` — public signup (first account becomes Admin, later ones Cashier)
 - `POST /api/auth/login`
-- `POST /api/auth/setup-admin`
+- `GET /api/auth/users` — Admin only
+- `POST /api/auth/users` — Admin only, create a user with a role
+- `PUT /api/auth/users/:id/role` — Admin only
+- `DELETE /api/auth/users/:id` — Admin only
+
+> Purchases and sales validate every item (stock, prices, invoice number) **before** changing anything,
+> so a failed request never leaves stock half-updated. This works on a normal local MongoDB as well as Atlas
+> (no replica set / transactions required).
 
 ---
 
