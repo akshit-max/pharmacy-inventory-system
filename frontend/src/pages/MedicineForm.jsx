@@ -14,6 +14,8 @@ function MedicineForm() {
         manufacturer: "",
         unit: "",
         reorderLevel: 10,
+        safetyStock: 20,
+        supplierLeadTime: 5,
         prescriptionRequired: false
     });
     const [loading, setLoading] = useState(false);
@@ -36,6 +38,8 @@ function MedicineForm() {
                     manufacturer: response.data.manufacturer || "",
                     unit: response.data.unit || "",
                     reorderLevel: response.data.reorderLevel ?? 10,
+                    safetyStock: response.data.safetyStock ?? 20,
+                    supplierLeadTime: response.data.supplierLeadTime ?? 5,
                     prescriptionRequired: Boolean(response.data.prescriptionRequired)
                 });
             } catch (error) {
@@ -51,7 +55,6 @@ function MedicineForm() {
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
 
-        // FIX 1: Spread the previous state to retain other form fields
         setFormData((prev) => ({
             ...prev,
             [name]: type === "checkbox" ? checked : value
@@ -59,38 +62,27 @@ function MedicineForm() {
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault(); // FIX 2: Corrected typo (was prevetDefault)
+        e.preventDefault();
 
         try {
             setLoading(true);
             setError("");
 
+            // Number inputs give strings, so convert them before sending
+            const medicineData = {
+                ...formData,
+                reorderLevel: Number(formData.reorderLevel),
+                safetyStock: Number(formData.safetyStock),
+                supplierLeadTime: Number(formData.supplierLeadTime)
+            };
+
             if (isEditing) {
-                await api.put(
-                    `/medicines/${id}`,
-                    formData
-                );
+                await api.put(`/medicines/${id}`, medicineData);
             } else {
-                await api.post(
-                    `/medicines`,
-                    formData
-                );
+                await api.post("/medicines", medicineData);
             }
 
-            if (!isEditing) {
-                setFormData({
-                    name: "",
-                    genericName: "",
-                    category: "",
-                    manufacturer: "",
-                    unit: "",
-                    reorderLevel: 10,
-                    prescriptionRequired: false
-                });
-            }
-
-            // Reset form on success
-            navigate('/medicines')
+            navigate("/medicines");
         } catch (error) {
             setError(
                 error.response?.data?.message || `Failed to ${isEditing ? "update" : "add"} medicine`
@@ -200,6 +192,33 @@ function MedicineForm() {
                         </div>
                     </div>
 
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        <div>
+                            <label className={labelClasses}>Safety Stock</label>
+                            <input
+                                type="number"
+                                name="safetyStock"
+                                value={formData.safetyStock}
+                                onChange={handleChange}
+                                min="0"
+                                className={inputClasses}
+                            />
+                            <p className="mt-1 text-xs text-slate-400">Extra units to always keep in reserve.</p>
+                        </div>
+                        <div>
+                            <label className={labelClasses}>Supplier Lead Time (days)</label>
+                            <input
+                                type="number"
+                                name="supplierLeadTime"
+                                value={formData.supplierLeadTime}
+                                onChange={handleChange}
+                                min="0"
+                                className={inputClasses}
+                            />
+                            <p className="mt-1 text-xs text-slate-400">Days the supplier takes to deliver.</p>
+                        </div>
+                    </div>
+
                     <div className="flex items-center border-t border-slate-100 pt-2">
                         <label className="flex items-center cursor-pointer">
                             <input
@@ -249,16 +268,14 @@ function MedicineForm() {
                         </span>
                     </button>
 
-                    {isEditing && (
-                        <button
-                            type="button"
-                            onClick={() => navigate("/medicines")}
-                            disabled={loading}
-                            className="min-h-11 w-full rounded-lg border border-slate-200 px-6 py-2.5 font-bold text-[#246879] transition-all duration-200 hover:border-[#009FC6] hover:bg-[#4DDCFF]/10 hover:text-[#009FC6] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                        >
-                            Cancel
-                        </button>
-                    )}
+                    <button
+                        type="button"
+                        onClick={() => navigate("/medicines")}
+                        disabled={loading}
+                        className="min-h-11 w-full rounded-lg border border-slate-200 px-6 py-2.5 font-bold text-[#246879] transition-all duration-200 hover:border-[#009FC6] hover:bg-[#4DDCFF]/10 hover:text-[#009FC6] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                    >
+                        Cancel
+                    </button>
                     </div>
 
                     </form>

@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback, Fragment } from "react";
+import { useEffect, useState, Fragment } from "react";
 import api from "../services/api";
 import Navbar from "../components/navbar";
 import Footer from "../components/footer";
+import { errorMessage } from "../utils/auth";
 
 const inputClasses = "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-[#009FC6] focus:bg-white focus:ring-4 focus:ring-[#4DDCFF]/20";
 
@@ -102,24 +103,31 @@ function ReceiptModal({ sale, onDismiss }) {
 // ─── Sales History Table ──────────────────────────────────────────────────────
 function SalesHistory() {
     const [sales, setSales] = useState([]);
+    const [reloadCount, setReloadCount] = useState(0); // bump to load the data again
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [expanded, setExpanded] = useState(null); // invoice being drilled into
 
-    const fetchSales = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError("");
-            const res = await api.get("/sales");
-            setSales(res.data);
-        } catch (err) {
-            setError(err.response?.data?.message || "Failed to load sales history.");
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    // Load data when the page opens, and again whenever reloadCount changes
+    useEffect(() => {
+        const loadSales = async () => {
+            try {
+                const res = await api.get("/sales");
+                setSales(res.data);
+                setError("");
+            } catch (err) {
+                setError(errorMessage(err, "Failed to load sales history."));
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadSales();
+    }, [reloadCount]);
 
-    useEffect(() => { fetchSales(); }, [fetchSales]);
+    const fetchSales = () => {
+        setLoading(true);
+        setReloadCount(reloadCount + 1);
+    };
 
     const formatDate = (d) =>
         new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
@@ -204,7 +212,7 @@ function SalesHistory() {
 
                                 {/* Expanded item breakdown */}
                                 {expanded === sale._id && (
-                                    <tr key={`${sale._id}-detail`}>
+                                    <tr>
                                         <td colSpan={6} className="px-5 pb-5 pt-0">
                                             <div className="sales-pop rounded-xl bg-slate-50 border border-slate-100 p-4">
                                                 <p className="text-xs font-bold text-[#246879] uppercase tracking-wider mb-3">
@@ -258,6 +266,45 @@ function NewSaleForm({ onSaleCompleted }) {
     const [selectedMedicine, setSelectedMedicine] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [sellableBatches, setSellableBatches] = useState([]); // unexpired batches with stock
+    const [stockVersion, setStockVersion] = useState(0); // bump to reload stock after a sale
+
+    // Load stock once (and again after each sale) so we can show availability and prices
+    useEffect(() => {
+        const loadStock = async () => {
+            try {
+                const response = await api.get("/inventory");
+                const batches = (response.data.inventory || []).filter(
+                    (batch) => !batch.isExpired && batch.quantity > 0
+                );
+                setSellableBatches(batches);
+            } catch (stockError) {
+                console.error("Failed to load stock", stockError);
+            }
+        };
+        loadStock();
+    }, [stockVersion]);
+
+    // Batches of one medicine, earliest expiry first (same order the backend sells in)
+    const batchesOf = (medicineId) => sellableBatches
+        .filter((batch) => batch.medicine?._id === medicineId)
+        .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+
+    const availableStock = (medicineId) =>
+        batchesOf(medicineId).reduce((total, batch) => total + batch.quantity, 0);
+
+    // Estimated price for `quantity` units, taking from earliest-expiry batches first
+    const estimatePrice = (medicineId, quantity) => {
+        let remaining = quantity;
+        let price = 0;
+        for (const batch of batchesOf(medicineId)) {
+            if (remaining <= 0) break;
+            const take = Math.min(batch.quantity, remaining);
+            price += take * batch.sellingPrice;
+            remaining -= take;
+        }
+        return price;
+    };
 
     useEffect(() => {
         const fetchMedicines = async () => {
@@ -272,7 +319,14 @@ function NewSaleForm({ onSaleCompleted }) {
     const addToCart = () => {
         const amount = Number(quantity);
         if (!selectedMedicine) return setError("Please select a medicine.");
-        if (!Number.isFinite(amount) || amount < 1) return setError("Quantity must be at least 1.");
+        if (!Number.isInteger(amount) || amount < 1) return setError("Quantity must be a whole number of at least 1.");
+
+        const alreadyInCart = cart.find((item) => item.medicine === selectedMedicine._id)?.quantity || 0;
+        const available = availableStock(selectedMedicine._id);
+        if (alreadyInCart + amount > available) {
+            return setError(`Only ${available} unit(s) of ${selectedMedicine.name} in stock.`);
+        }
+
         setCart((current) => {
             const existing = current.find((item) => item.medicine === selectedMedicine._id);
             return existing
@@ -284,7 +338,12 @@ function NewSaleForm({ onSaleCompleted }) {
 
     const updateQuantity = (id, value) => {
         const amount = Number(value);
-        if (!Number.isFinite(amount) || amount < 1) return;
+        if (!Number.isInteger(amount) || amount < 1) return;
+        if (amount > availableStock(id)) {
+            setError(`Only ${availableStock(id)} unit(s) in stock.`);
+            return;
+        }
+        setError("");
         setCart((current) => current.map((item) => item.medicine === id ? { ...item, quantity: amount } : item));
     };
     const removeFromCart = (id) => setCart((current) => current.filter((item) => item.medicine !== id));
@@ -300,16 +359,18 @@ function NewSaleForm({ onSaleCompleted }) {
                 items: cart.map((item) => ({ medicine: item.medicine, quantity: item.quantity })),
             });
             setCart([]); setCustomerName(""); setCustomerPhone("");
+            setStockVersion(stockVersion + 1); // stock changed, reload it
             // Pass the completed sale record up so the parent can show the receipt
             onSaleCompleted(response.data);
         } catch (saleError) {
-            setError(saleError.response?.data?.message || "Failed to create sale.");
+            setError(errorMessage(saleError, "Failed to create sale."));
         } finally {
             setLoading(false);
         }
     };
 
     const totalUnits = cart.reduce((total, item) => total + item.quantity, 0);
+    const estimatedTotal = cart.reduce((total, item) => total + estimatePrice(item.medicine, item.quantity), 0);
 
     return (
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_25rem]">
@@ -369,7 +430,9 @@ function NewSaleForm({ onSaleCompleted }) {
                                         <span className="block font-bold text-[#006179] group-hover:text-[#009FC6]">{medicine.name}</span>
                                         {medicine.genericName && <span className="mt-0.5 block text-xs text-slate-400">{medicine.genericName}</span>}
                                     </span>
-                                    <span className="text-lg text-[#009FC6] transition-transform group-hover:translate-x-1">›</span>
+                                    <span className={`text-xs font-bold ${availableStock(medicine._id) > 0 ? "text-emerald-600" : "text-rose-500"}`}>
+                                        {availableStock(medicine._id) > 0 ? `In stock: ${availableStock(medicine._id)}` : "Out of stock"}
+                                    </span>
                                 </button>
                             )) : (
                                 <p className="px-4 py-5 text-center text-sm font-medium text-slate-400">No medicines found for "{search}".</p>
@@ -381,6 +444,10 @@ function NewSaleForm({ onSaleCompleted }) {
                             <div>
                                 <p className="font-bold text-[#006179]">{selectedMedicine.name}</p>
                                 <p className="text-sm text-[#246879]">{selectedMedicine.genericName || "Selected medicine"}</p>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    Available: {availableStock(selectedMedicine._id)} units
+                                    {availableStock(selectedMedicine._id) > 0 && ` · ₹${estimatePrice(selectedMedicine._id, 1).toFixed(2)} per unit`}
+                                </p>
                             </div>
                             <div className="flex items-center gap-3">
                                 <input
@@ -411,7 +478,7 @@ function NewSaleForm({ onSaleCompleted }) {
                         <div key={item.medicine} className="sales-pop flex items-center gap-3 rounded-xl bg-slate-50 p-3">
                             <div className="min-w-0 grow">
                                 <p className="truncate text-sm font-bold text-[#006179]">{item.name}</p>
-                                {item.genericName && <p className="truncate text-xs text-slate-400">{item.genericName}</p>}
+                                <p className="truncate text-xs text-slate-400">₹{estimatePrice(item.medicine, item.quantity).toFixed(2)}</p>
                             </div>
                             <input
                                 className="w-14 rounded-lg border border-slate-200 bg-white px-1 py-1.5 text-center text-sm font-bold text-[#006179] outline-none focus:border-[#009FC6]"
@@ -434,6 +501,10 @@ function NewSaleForm({ onSaleCompleted }) {
                     <div className="mb-4 flex items-center justify-between text-sm">
                         <span className="font-medium text-slate-500">Items</span>
                         <span className="font-bold text-[#006179]">{totalUnits} units</span>
+                    </div>
+                    <div className="mb-4 flex items-center justify-between">
+                        <span className="font-medium text-slate-500">Estimated total</span>
+                        <span className="text-xl font-extrabold text-[#006179]">₹{estimatedTotal.toFixed(2)}</span>
                     </div>
                     {error && (
                         <div className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">

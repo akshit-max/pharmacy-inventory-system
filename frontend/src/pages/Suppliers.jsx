@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 import Navbar from "../components/navbar";
 import Footer from "../components/footer";
+import { errorMessage, hasRole } from "../utils/auth";
 
 function Suppliers() {
     const [suppliers, setSuppliers] = useState([]);
@@ -22,21 +23,21 @@ function Suppliers() {
     const [formLoading, setFormLoading] = useState(false);
     const [formError, setFormError] = useState("");
 
-    const fetchSuppliers = async () => {
-        try {
-            setLoading(true);
-            const response = await api.get("/suppliers");
-            setSuppliers(response.data);
-        } catch (err) {
-            console.error("Failed to fetch suppliers", err);
-            setError("Could not load suppliers.");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const canManage = hasRole("Admin"); // only Admin can add/edit/delete suppliers
 
+    // Load data once when the page opens
     useEffect(() => {
-        fetchSuppliers();
+        const loadSuppliers = async () => {
+            try {
+                const response = await api.get("/suppliers");
+                setSuppliers(response.data);
+            } catch (err) {
+                setError(errorMessage(err, "Could not load suppliers."));
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadSuppliers();
     }, []);
 
     const handleInputChange = (e) => {
@@ -51,7 +52,15 @@ function Suppliers() {
     };
 
     const handleEdit = (supplier) => {
-        setFormData(supplier);
+        // Copy only the form fields, using "" for anything that is empty
+        setFormData({
+            _id: supplier._id,
+            name: supplier.name || "",
+            contactPerson: supplier.contactPerson || "",
+            phone: supplier.phone || "",
+            email: supplier.email || "",
+            address: supplier.address || ""
+        });
         setIsEditing(true);
         setShowForm(true);
         setFormError("");
@@ -63,34 +72,39 @@ function Suppliers() {
             await api.delete(`/suppliers/${id}`);
             setSuppliers(suppliers.filter(s => s._id !== id));
         } catch (err) {
-            console.error("Failed to delete supplier", err);
-            alert("Failed to delete supplier.");
+            alert(errorMessage(err, "Failed to delete supplier."));
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setFormLoading(true);
         setFormError("");
 
-        if (!formData.name || !formData.phone) {
+        if (!formData.name.trim() || !formData.phone.trim()) {
             setFormError("Name and Phone are required.");
-            setFormLoading(false);
             return;
         }
 
+        const supplierData = {
+            name: formData.name,
+            contactPerson: formData.contactPerson,
+            phone: formData.phone,
+            email: formData.email,
+            address: formData.address
+        };
+
+        setFormLoading(true);
         try {
             if (isEditing) {
-                const response = await api.put(`/suppliers/${formData._id}`, formData);
+                const response = await api.put(`/suppliers/${formData._id}`, supplierData);
                 setSuppliers(suppliers.map(s => (s._id === formData._id ? response.data : s)));
             } else {
-                const response = await api.post("/suppliers", formData);
+                const response = await api.post("/suppliers", supplierData);
                 setSuppliers([response.data, ...suppliers]);
             }
             resetForm();
         } catch (err) {
-            console.error("Error saving supplier", err);
-            setFormError(err.response?.data?.message || "Failed to save supplier.");
+            setFormError(errorMessage(err, "Failed to save supplier."));
         } finally {
             setFormLoading(false);
         }
@@ -101,12 +115,12 @@ function Suppliers() {
             <Navbar />
             <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans">
                 <div className="max-w-6xl mx-auto space-y-8">
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-wrap gap-4 justify-between items-center">
                         <div>
                             <h1 className="text-4xl font-black text-[#006179]">Suppliers</h1>
                             <p className="text-[#246879] mt-2">Manage your pharmacy's suppliers and vendors.</p>
                         </div>
-                        {!showForm && (
+                        {canManage && !showForm && (
                             <button
                                 onClick={() => setShowForm(true)}
                                 className="bg-[#009FC6] hover:bg-[#006179] text-white px-5 py-2.5 rounded-xl font-bold transition-colors"
@@ -172,7 +186,7 @@ function Suppliers() {
                                             <th className="px-6 py-4">Name</th>
                                             <th className="px-6 py-4">Contact Person</th>
                                             <th className="px-6 py-4">Phone & Email</th>
-                                            <th className="px-6 py-4 text-right">Actions</th>
+                                            {canManage && <th className="px-6 py-4 text-right">Actions</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 text-sm">
@@ -184,10 +198,12 @@ function Suppliers() {
                                                     <p className="font-semibold text-gray-800">{supplier.phone}</p>
                                                     <p className="text-gray-500 text-xs">{supplier.email || "—"}</p>
                                                 </td>
-                                                <td className="px-6 py-4 text-right space-x-3">
-                                                    <button onClick={() => handleEdit(supplier)} className="text-[#009FC6] font-bold hover:underline">Edit</button>
-                                                    <button onClick={() => handleDelete(supplier._id)} className="text-red-500 font-bold hover:underline">Delete</button>
-                                                </td>
+                                                {canManage && (
+                                                    <td className="px-6 py-4 text-right space-x-3">
+                                                        <button onClick={() => handleEdit(supplier)} className="text-[#009FC6] font-bold hover:underline">Edit</button>
+                                                        <button onClick={() => handleDelete(supplier._id)} className="text-red-500 font-bold hover:underline">Delete</button>
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))}
                                     </tbody>

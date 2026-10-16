@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import Navbar from "../components/navbar";
 import Footer from "../components/footer";
+import { errorMessage, hasRole } from "../utils/auth";
 
 function Medicines() {
     const [medicines, setMedicines] = useState([]);
@@ -10,43 +11,40 @@ function Medicines() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [loading, setLoading] = useState(true);
-    
+    const [error, setError] = useState("");
+    const [reloadCount, setReloadCount] = useState(0); // bump this to load the list again
+
     const navigate = useNavigate();
+    const canEdit = hasRole("Admin", "Pharmacist");
 
-    const fetchMedicines = async () => {
-        try {
-            setLoading(true);
-            const response = await api.get("/medicines", {
-                params: {
-                    search,
-                    page,
-                    limit: 5
-                }
-            });
-            setMedicines(response.data.medicines);
-            setTotalPages(response.data.totalPages);
-        } catch (error) {
-            console.error("Failed to fetch medicines", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // Load medicines whenever the search text or page changes
     useEffect(() => {
-        fetchMedicines();
-    }, [search, page]);
+        const loadMedicines = async () => {
+            try {
+                const response = await api.get("/medicines", {
+                    params: { search, page, limit: 5 }
+                });
+                setMedicines(response.data.medicines);
+                setTotalPages(response.data.totalPages);
+            } catch (err) {
+                setError(errorMessage(err, "Failed to load medicines"));
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadMedicines();
+    }, [search, page, reloadCount]);
 
     const handleDelete = async (id) => {
         const confirmed = window.confirm("Are you sure you want to delete this medicine?");
         if (!confirmed) return;
 
+        setError("");
         try {
             await api.delete(`/medicines/${id}`);
-            setMedicines((previousMedicines) =>
-                previousMedicines.filter((medicine) => medicine._id !== id)
-            );
-        } catch (error) {
-            console.error("Failed to delete medicine", error);
+            setReloadCount(reloadCount + 1);
+        } catch (err) {
+            setError(errorMessage(err, "Failed to delete medicine"));
         }
     };
 
@@ -68,11 +66,12 @@ function Medicines() {
                             Medicine Management
                         </h1>
                         <p className="text-[#246879] mt-3 text-lg font-medium">
-                            Manage your inventory, update stock details, or register new items.
+                            Your medicine catalogue. Stock for each medicine is added through Purchases.
                         </p>
                     </div>
                     
                     {/* Add Medicine Button */}
+                    {canEdit && (
                     <button
                         onClick={() => navigate('/medicines/add')}
                         className="inline-flex items-center gap-2 bg-[#009FC6] hover:bg-[#006179] text-white px-6 py-3.5 rounded-xl font-bold shadow-lg shadow-[#009FC6]/20 transition-all transform hover:-translate-y-0.5 focus:ring-4 focus:ring-[#4DDCFF]/40"
@@ -80,7 +79,12 @@ function Medicines() {
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                         Add New Medicine
                     </button>
+                    )}
                 </div>
+
+                {error && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4 font-semibold text-red-700">{error}</div>
+                )}
 
                 {/* Inventory Table Container */}
                 <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden relative">
@@ -103,7 +107,7 @@ function Medicines() {
                             </div>
                             <input
                                 type="text"
-                                placeholder="Search by name or category..."
+                                placeholder="Search by name, generic name or category..."
                                 value={search}
                                 onChange={handleSearch}
                                 className="w-full pl-11 pr-5 py-3.5 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#4DDCFF] focus:outline-none focus:ring-4 focus:ring-[#4DDCFF]/20 text-[#006179] placeholder-gray-400 font-medium transition-all"
@@ -134,7 +138,7 @@ function Medicines() {
                                         <th className="px-6 py-5 text-xs font-extrabold text-[#246879] uppercase tracking-widest">Unit</th>
                                         <th className="px-6 py-5 text-xs font-extrabold text-[#246879] uppercase tracking-widest">Reorder Level</th>
                                         <th className="px-6 py-5 text-xs font-extrabold text-[#246879] uppercase tracking-widest">Prescription</th>
-                                        <th className="px-6 py-5 text-xs font-extrabold text-[#246879] uppercase tracking-widest text-right">Manage</th>
+                                        {canEdit && <th className="px-6 py-5 text-xs font-extrabold text-[#246879] uppercase tracking-widest text-right">Manage</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
@@ -157,12 +161,13 @@ function Medicines() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-5">
-                                                {(medicine.prescriptionRequired ?? medicine.prescriptionRequsired) ? (
+                                                {medicine.prescriptionRequired ? (
                                                     <span className="inline-flex rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700 border border-rose-200">Required</span>
                                                 ) : (
                                                     <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">Not required</span>
                                                 )}
                                             </td>
+                                            {canEdit && (
                                             <td className="px-6 py-5 text-right space-x-3 whitespace-nowrap">
                                                 <button
                                                     onClick={() => navigate(`/medicines/${medicine._id}/edit`)}
@@ -177,6 +182,7 @@ function Medicines() {
                                                     Delete
                                                 </button>
                                             </td>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>
