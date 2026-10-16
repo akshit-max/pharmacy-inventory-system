@@ -41,6 +41,20 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/dashBoard", dashBoardRoutes);
 app.use("/api/dashboard", dashBoardRoutes);
 
+// Any unknown /api route gets a clear JSON message instead of an HTML page
+app.use("/api", (req, res) => {
+    res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` });
+});
+
+// Bad JSON in a request body, or any unexpected error
+app.use((err, req, res, next) => {
+    if (err.type === "entity.parse.failed") {
+        return res.status(400).json({ message: "Invalid JSON in request body" });
+    }
+    console.error(err);
+    res.status(500).json({ message: "Something went wrong on the server" });
+});
+
 
 const PORT= process.env.PORT || 5000 ;
 app.listen(PORT,()=>{
