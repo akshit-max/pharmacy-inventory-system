@@ -47,7 +47,7 @@ function App() {
         <Route path="/signup" element={<Signup />} />
 
         {/* Logged-in pages */}
-        <Route path="/dashboard" element={<ProtectedRoute roles={STAFF}><Dashboard /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute roles={ALL}><Dashboard /></ProtectedRoute>} />
         <Route path="/inventory" element={<ProtectedRoute roles={ALL}><Inventory /></ProtectedRoute>} />
         <Route path="/medicines" element={<ProtectedRoute roles={ALL}><Medicines /></ProtectedRoute>} />
         <Route path="/medicines/add" element={<ProtectedRoute roles={STAFF}><MedicineForm /></ProtectedRoute>} />

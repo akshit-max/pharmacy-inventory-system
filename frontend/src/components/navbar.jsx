@@ -4,7 +4,7 @@ import { getUser, isLoggedIn, logout } from '../utils/auth';
 
 // Each link lists the roles that are allowed to see it
 const navLinks = [
-    { name: 'Dashboard', path: '/dashboard', roles: ['Admin', 'Pharmacist'] },
+    { name: 'Dashboard', path: '/dashboard', roles: ['Admin', 'Pharmacist', 'Cashier'] },
     { name: 'Inventory', path: '/inventory', roles: ['Admin', 'Pharmacist', 'Cashier'] },
     { name: 'Medicines', path: '/medicines', roles: ['Admin', 'Pharmacist', 'Cashier'] },
     { name: 'Sales', path: '/sales', roles: ['Admin', 'Pharmacist', 'Cashier'] },
