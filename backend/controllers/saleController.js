@@ -58,9 +58,11 @@ exports.createSale = async (req, res) => {
             plan.push({ medicine, batches, quantity: wanted });
         }
 
-        // ---- Step 2: deduct stock batch by batch ----
+        // ---- Step 2: calculate stock deduction batch by batch (FEFO) ----
         const saleItems = [];
         const movements = [];
+        const batchUpdates = [];
+
         for (const { medicine, batches, quantity } of plan) {
             let remaining = quantity;
 
@@ -68,8 +70,6 @@ exports.createSale = async (req, res) => {
                 if (remaining <= 0) break;
 
                 const takeFromBatch = Math.min(batch.quantity, remaining);
-                batch.quantity -= takeFromBatch;
-                await batch.save();
 
                 saleItems.push({
                     medicine: medicine._id,
@@ -88,11 +88,16 @@ exports.createSale = async (req, res) => {
                     performedBy: req.user ? req.user.id : undefined
                 });
 
+                batchUpdates.push({
+                    batch,
+                    newQuantity: batch.quantity - takeFromBatch
+                });
+
                 remaining -= takeFromBatch;
             }
         }
 
-        // ---- Step 3: save sale and audit trail ----
+        // ---- Step 3: save sale first ----
         const totalAmount = saleItems.reduce((total, item) => total + item.total, 0);
 
         const sale = await Sale.create({
@@ -102,6 +107,12 @@ exports.createSale = async (req, res) => {
             items: saleItems,
             totalAmount
         });
+
+        // ---- Step 4: deduct stock from batches & record audit movements ----
+        for (const { batch, newQuantity } of batchUpdates) {
+            batch.quantity = newQuantity;
+            await batch.save();
+        }
 
         for (const movement of movements) {
             movement.referenceId = sale._id;

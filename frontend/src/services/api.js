@@ -1,11 +1,8 @@
 import axios from 'axios';
 
-const defaultApiUrl = import.meta.env.DEV
-  ? 'http://localhost:5000/api'
-  : 'https://pharmasys-cqzl.onrender.com/api';
-
+// Backend API URL from environment variable, with local fallback for development
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || defaultApiUrl,
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json',
   },
