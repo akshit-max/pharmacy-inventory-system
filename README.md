@@ -450,7 +450,5 @@ Base URL prefix: `/api`. Protected routes require a valid JWT token in the `Auth
 
 ---
 
-## Author 
 
-- **Repository**: [PharmaSys](https://github.com/Anuj-codee/PharmaSys)
 
